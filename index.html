@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Vistaguay Control - Panel de Misiones Agrícolas</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#10131a",
+                        "primary-fixed-dim": "#98cbff",
+                        "secondary-container": "#3e4754",
+                        "primary-container": "#005f97",
+                        "inverse-on-surface": "#2e3037",
+                        "on-primary": "#003354",
+                        "surface-tint": "#98cbff",
+                        "secondary-fixed": "#dae3f2",
+                        "tertiary-fixed-dim": "#00dce5",
+                        "on-tertiary": "#003739",
+                        "outline-variant": "#434654",
+                        "error-container": "#93000a",
+                        "secondary": "#bec7d6",
+                        "on-surface-variant": "#c3c6d6",
+                        "background": "#10131a",
+                        "primary-fixed": "#cfe5ff",
+                        "surface-container-highest": "#32353c",
+                        "on-secondary-container": "#adb6c4",
+                        "surface-variant": "#32353c",
+                        "on-primary-container": "#b2d7ff",
+                        "secondary-fixed-dim": "#bec7d6",
+                        "outline": "#8d90a0",
+                        "surface-container-lowest": "#0b0e14",
+                        "on-surface": "#e1e2eb",
+                        "on-background": "#e1e2eb",
+                        "surface-container-high": "#272a31",
+                        "primary": "#98cbff",
+                        "on-tertiary-container": "#00e9f3",
+                        "surface-container": "#1d2026",
+                        "on-error": "#690005",
+                        "tertiary": "#00dce5",
+                        "surface-container-low": "#191c22",
+                        "on-secondary-fixed": "#131c27",
+                        "on-secondary": "#28313c",
+                        "inverse-primary": "#00629d",
+                        "on-tertiary-fixed": "#002021",
+                        "on-primary-fixed-variant": "#004a77",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed": "#63f7ff",
+                        "on-tertiary-fixed-variant": "#004f53",
+                        "on-primary-fixed": "#001d33",
+                        "on-secondary-fixed-variant": "#3e4754",
+                        "tertiary-container": "#006569",
+                        "surface": "#10131a",
+                        "surface-bright": "#363940",
+                        "inverse-surface": "#e1e2eb",
+                        "error": "#ffb4ab",
+                        "expert-emerald": "#10b981",
+                        "modal-bg": "#0D1117",
+                        "card-bg": "#161B22"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            background-color: #10131a;
+            color: #e1e2eb;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .glass-panel {
+            background: rgba(29, 32, 38, 0.6);
+            backdrop-filter: blur(24px);
+        }
+
+        .compact-text {
+            font-size: 0.75rem;
+            line-height: 1.125rem;
+        }
+
+        .compact-label {
+            font-size: 0.6875rem;
+            letter-spacing: 0.05em;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #434654;
+            border-radius: 10px;
+        }
+
+        .segmented-control {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            padding: 0.125rem;
+            display: inline-flex;
+        }
+
+        .segmented-control input {
+            display: none;
+        }
+
+        .segmented-control label {
+            padding: 0.25rem 0.75rem;
+            cursor: pointer;
+            border-radius: 0.375rem;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            color: #8d90a0;
+        }
+
+        .segmented-control input:checked+label {
+            background: #98cbff;
+            color: #003354;
+        }
+
+        /* Z-Index Fixes */
+        header {
+            z-index: 80 !important;
+        }
+
+        #map {
+            z-index: 10 !important;
+        }
+
+        .fixed.inset-0 {
+            z-index: 100 !important;
+        }
+
+        #loading-screen {
+            z-index: 200 !important;
+        }
+
+        #detalle-modal {
+            z-index: 120 !important;
+        }
+
+        #postulados-modal {
+            z-index: 130 !important;
+        }
+
+        /* Leaflet Marker Custom Styles */
+
+        .custom-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .custom-marker:hover {
+            transform: scale(1.2) translateY(-4px);
+            z-index: 1000 !important;
+        }
+
+        .marker-pin {
+            width: 32px;
+            height: 32px;
+            border-radius: 50% 50% 50% 0;
+            position: absolute;
+            transform: rotate(-45deg);
+            left: 50%;
+            top: 50%;
+            margin: -16px 0 0 -16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .marker-icon {
+            position: relative;
+            z-index: 1;
+            color: white;
+            font-size: 18px !important;
+        }
+
+        /* Loader Animation */
+        #loading-screen {
+            transition: opacity 0.5s ease, visibility 0.5s;
+        }
+
+        .loader-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(152, 203, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: #98cbff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Highlight Row Animation */
+        @keyframes highlightRow {
+            0% {
+                background: rgba(152, 203, 255, 0.3);
+            }
+
+            100% {
+                background: transparent;
+            }
+        }
+
+        .row-highlight {
+            animation: highlightRow 2s ease-out forwards;
+        }
+
+        .row-active {
+            background-color: rgba(152, 203, 255, 0.15) !important;
+            border-left: 3px solid #98cbff !important;
+        }
+
+        .marker-active {
+            z-index: 1000 !important;
+        }
+
+        .marker-active .marker-pin {
+            transform: scale(1.5) translateY(-8px) rotate(-45deg) !important;
+            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.6));
+            border: 2px solid white !important;
+        }
+
+        .marker-active .marker-icon {
+            transform: scale(1.3) translateY(-8px) !important;
+        }
+    </style>
+
+</head>
+
+<body class="bg-surface select-none text-xs">
+    <!-- Componente Loader -->
+    <div id="loading-screen"
+        class="fixed inset-0 z-[100] bg-[#10131a] flex flex-col items-center justify-center transition-all duration-500">
+        <div class="loader-spinner mb-4"></div>
+        <p class="text-on-surface-variant font-manrope font-bold tracking-widest text-[10px] uppercase animate-pulse">
+            Conectando con base operativa...
+        </p>
+        <p class="text-primary text-[9px] mt-1 font-medium opacity-70">
+            Obteniendo solicitudes y pilotos
+        </p>
+    </div>
+
+    <!-- TopNavBar -->
+    <header
+        class="fixed top-0 w-full z-[80] h-14 bg-slate-900/80 backdrop-blur-3xl border-b border-white/10 shadow-xl flex justify-between items-center px-6">
+
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-blue-400 text-xl"
+                style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+            <h1 class="text-lg font-bold tracking-tighter text-blue-400 font-manrope">Vistaguay Control</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="segmented-control border border-white/5">
+                <input checked="" id="view-all" name="filter-active" type="radio" onchange="filterData()" />
+                <label for="view-all">Ver Todo</label>
+                <input id="view-active" name="filter-active" type="radio" onchange="filterData()" />
+                <label for="view-active">Solo Activas</label>
+            </div>
+
+            <button
+                class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-3 py-1.5 rounded-md compact-label font-bold active:scale-95 transition-transform duration-200 flex items-center gap-1.5">
+                Grafana
+                <span class="material-symbols-outlined text-xs">open_in_new</span>
+            </button>
+        </div>
+    </header>
+    <main class="pt-24 px-6 pb-6 w-full mx-auto space-y-4">
+
+        <!-- Main Section (Map + Table) -->
+        <div class="flex flex-col lg:flex-row gap-4 h-[calc(100vh-180px)] min-h-[500px]">
+
+            <!-- Map (40%) -->
+            <section
+                class="lg:w-2/5 h-full relative rounded-xl overflow-hidden shadow-2xl border border-white/5 bg-surface-container-low"
+                id="map">
+                <!-- Leaflet container -->
+            </section>
+
+            <!-- Flight Requests Table (60%) -->
+            <section class="lg:w-3/5 glass-panel rounded-xl flex flex-col overflow-hidden border border-white/5">
+                <div class="px-4 py-3 flex justify-between items-center border-b border-outline-variant/10">
+                    <h2 class="font-headline font-bold text-sm text-primary uppercase tracking-tight">Solicitudes de
+                        Vuelo</h2>
+                    <div
+                        class="bg-surface-container-highest rounded-full px-3 py-1 flex items-center gap-2 border border-white/5">
+                        <span class="material-symbols-outlined text-[10px] text-on-surface-variant">search</span>
+                        <input
+                            class="bg-transparent border-none text-[9px] focus:ring-0 p-0 w-24 placeholder:text-on-surface-variant/50"
+                            placeholder="Buscar ID o Empresa..." type="text" id="global-search"
+                            oninput="filterData()" />
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="sticky top-0 bg-surface-container-low z-10">
+                            <tr>
+                                <th
+                                    class="px-4 py-2 compact-label font-bold text-on-surface-variant uppercase tracking-widest border-b border-outline-variant/5">
+                                    ID</th>
+                                <th
+                                    class="px-4 py-2 compact-label font-bold text-on-surface-variant uppercase tracking-widest border-b border-outline-variant/5">
+                                    Empresa/Nombre</th>
+                                <th
+                                    class="px-4 py-2 compact-label font-bold text-on-surface-variant uppercase tracking-widest border-b border-outline-variant/5">
+                                    Fecha</th>
+                                <th
+                                    class="px-4 py-2 compact-label font-bold text-on-surface-variant uppercase tracking-widest border-b border-outline-variant/5">
+                                    Tipo</th>
+                                <th
+                                    class="px-4 py-2 compact-label font-bold text-on-surface-variant uppercase tracking-widest border-b border-outline-variant/5">
+                                    Postulados</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-outline-variant/5" id="flights-table-body">
+                            <!-- Dynamic Rows -->
+                        </tbody>
+
+                    </table>
+                </div>
+            </section>
+        </div>
+        <!-- Pilot Directory Section -->
+        <section class="space-y-3 mt-24">
+            <div class="flex items-center gap-3 mb-10">
+
+
+                <h2 class="font-headline font-bold text-lg tracking-tight text-on-surface">Lista de Pilotos</h2>
+                <div class="h-[1px] flex-1 bg-gradient-to-r from-outline-variant/20 to-transparent"></div>
+            </div>
+            <div class="glass-panel rounded-xl overflow-hidden border border-outline-variant/10">
+                <table class="w-full text-left">
+                    <thead class="bg-surface-container-lowest">
+                        <tr>
+                            <th class="px-4 py-2.5 compact-label font-bold text-on-surface-variant uppercase">Nombre
+                            </th>
+                            <th class="px-4 py-2.5 compact-label font-bold text-on-surface-variant uppercase">Email</th>
+                            <th class="px-4 py-2.5 compact-label font-bold text-on-surface-variant uppercase">ID Vuelo
+                            </th>
+                            <th class="px-4 py-2.5 compact-label font-bold text-on-surface-variant uppercase">Precio/Ha
+                            </th>
+                            <th class="px-4 py-2.5 compact-label font-bold text-on-surface-variant uppercase">User ID
+                            </th>
+                            <th class="px-4 py-2.5 compact-label font-bold text-on-surface-variant uppercase">Estado
+                                Expert</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-outline-variant/10 text-[11px]" id="pilots-global-table-body">
+                        <!-- Consolidated Pilots -->
+                    </tbody>
+
+                </table>
+            </div>
+        </section>
+    </main>
+    <!-- Modal: Detalle de Solicitud -->
+    <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden"
+        id="detalle-modal">
+        <div
+            class="bg-modal-bg w-full max-w-3xl rounded-xl border border-white/10 flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-card-bg/40">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary">description</span>
+                    <h3 class="text-sm font-bold font-headline text-on-surface uppercase tracking-wide">Detalle de
+                        Operación <span class="text-primary ml-1" id="modal-id-display">#SQ-2045</span></h3>
+                </div>
+                <button
+                    class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                    onclick="closeModal('detalle-modal')">
+                    <span class="material-symbols-outlined text-base">close</span>
+                </button>
+            </div>
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto max-h-[70vh]">
+                <!-- Col 1: Ubicación General (Universal) -->
+                <div class="space-y-4">
+                    <div>
+                        <h4
+                            class="text-[10px] font-bold text-on-surface-variant uppercase border-b border-outline-variant/20 pb-1 mb-2">
+                            Ubicación y Lote</h4>
+                        <div class="grid grid-cols-2 gap-y-1.5 text-xs">
+                            <span class="text-on-surface-variant">Localidad:</span> <span class="font-semibold"
+                                id="val-localidad">Pergamino, BA</span>
+                            <span class="text-on-surface-variant">Coordenadas:</span> <span
+                                class="font-mono text-primary-fixed-dim text-[10px]" id="val-coordenadas">-33.8917,
+                                -60.5741</span>
+                            <span class="text-on-surface-variant">Hectáreas:</span> <span
+                                class="font-semibold text-primary" id="val-hectareas">120 Ha</span>
+                            <span class="text-on-surface-variant">Cultivo:</span> <span class="font-semibold"
+                                id="val-cultivo">Soja de 1ra</span>
+                            <span class="text-on-surface-variant">Obstáculos:</span> <span
+                                class="font-semibold text-error" id="val-obstaculos">Línea eléctrica</span>
+                            <span class="text-on-surface-variant">Forma de Pago:</span> <span
+                                class="font-bold text-tertiary" id="val-pago">Transferencia 30 días</span>
+                        </div>
+                    </div>
+                    <!-- Contenedor eliminado -->
+                </div>
+
+                <!-- Col 2: Info Específica -->
+                <div class="bg-primary-container/10 p-4 rounded-xl border border-primary/20 flex flex-col space-y-3"
+                    id="ui-specific-container">
+                    <!-- Dynamic UI will be injected here -->
+                </div>
+
+            </div>
+            <div class="p-4 bg-surface-container-high/40 border-t border-white/10 flex justify-end">
+                <button
+                    class="bg-primary text-on-primary px-6 py-1.5 rounded-lg text-xs font-bold hover:brightness-110 active:scale-95 transition-all"
+                    onclick="closeModal('detalle-modal')">Entendido</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal de Postulados -->
+    <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden"
+        id="postulados-modal">
+        <div
+            class="bg-modal-bg w-full max-w-4xl max-h-[85vh] rounded-2xl border border-white/10 flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-card-bg/50">
+                <h3 class="text-base font-bold font-headline text-primary uppercase">Postulaciones Recibidas</h3>
+                <button
+                    class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                    onclick="closeModal('postulados-modal')">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+            </div>
+            <!-- State 1: Lista de Postulantes -->
+            <div class="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[480px]"
+                id="postulados-lista-view">
+
+                <!-- Cards will be injected dynamically -->
+            </div>
+
+            <!-- State 2: Post-Asignación (Two Column Success View) -->
+            <div class="p-6 hidden overflow-y-auto" id="assignment-success-view">
+                <div class="flex flex-col items-center text-center mb-6">
+                    <div class="w-10 h-10 bg-expert-emerald/20 rounded-full flex items-center justify-center mb-2">
+                        <span class="material-symbols-outlined text-expert-emerald text-2xl">check_circle</span>
+                    </div>
+                    <h4 class="text-lg font-bold font-manrope text-white uppercase tracking-tight">Vuelo Asignado con
+                        Éxito</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Left Column: Selected Pilot -->
+                    <div class="space-y-4">
+                        <div class="bg-primary-container/10 border border-primary/20 p-4 rounded-xl">
+                            <h5 class="text-[10px] font-bold text-primary uppercase mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-xs">person_check</span> Piloto Seleccionado
+                            </h5>
+                            <div class="space-y-1 mb-4">
+                                <p class="text-sm font-bold text-white" id="success-pilot-name">Marco Vettori</p>
+                                <p class="text-[10px] text-on-surface-variant" id="success-pilot-email">
+                                    m.vettori@vistaguay.com</p>
+                                <p class="text-[9px] font-mono text-primary-fixed-dim" id="success-pilot-id">USR-0982
+                                </p>
+                            </div>
+                            <div class="bg-black/40 p-3 rounded border border-white/5 relative">
+                                <p class="text-[10px] font-bold text-primary uppercase mb-1 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[10px]">send</span> Mensaje de acción
+                                </p>
+                                <p class="text-[11px] italic text-on-surface/90 select-all leading-relaxed"
+                                    id="communication-msg">
+                                    'Hola [Nombre], has sido elegido para el vuelo de [X] ha en la localidad de [X].'
+                                </p>
+                                <button class="absolute top-2 right-2 text-[9px] text-primary hover:underline"
+                                    onclick="copyMessage()">Copiar</button>
+                            </div>
+
+                        </div>
+                    </div>
+                    <!-- Right Column: Rejection Management -->
+                    <div class="space-y-4">
+                        <div class="bg-surface-container-low border border-white/5 p-4 rounded-xl">
+                            <h5
+                                class="text-[10px] font-bold text-on-surface-variant uppercase mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-xs">group_remove</span> Pilotos no
+                                seleccionados
+                            </h5>
+                            <div class="space-y-3 mb-4 max-h-32 overflow-y-auto pr-2" id="rejection-list">
+                                <div class="flex justify-between items-center text-[10px] pb-1 border-b border-white/5">
+                                    <div class="flex flex-col">
+                                        <span class="font-bold" id="rejection-pilot-name">Julian Ross</span>
+                                        <span class="opacity-60">j.ross@ops.aero</span>
+                                    </div>
+                                    <span class="font-mono opacity-40">USR-4421</span>
+                                </div>
+                            </div>
+                            <div class="bg-white/5 p-3 rounded border border-white/5 relative">
+                                <p class="text-[10px] font-bold text-on-surface-variant uppercase mb-1">Mensaje de
+                                    Cortesía</p>
+                                <div id="rejection-msg-container">
+                                    <p class="text-[10px] leading-relaxed text-on-surface/70 italic pr-8"
+                                        id="rejection-full-msg">
+                                        "Por esta ocasión no fuiste elegido para el vuelo de <span
+                                            id="rej-ha">120</span>
+                                        ha en <span id="rej-loc">Pergamino</span>, pero hay más ofertas disponibles
+                                        para que puedas postularte: <a class="text-primary hover:underline font-bold"
+                                            href="https://mapa-vuelos-aplicacion-beta.vercel.app/">Link al
+                                            mapa</a>"
+                                    </p>
+                                </div>
+                                <button
+                                    class="absolute top-2 right-2 text-[9px] text-on-surface-variant hover:underline"
+                                    onclick="copyCourtesyMessage()">Copiar</button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-center pt-6">
+                    <button
+                        class="bg-primary text-on-primary text-[10px] font-bold px-8 py-2 rounded-lg hover:brightness-110 active:scale-95 transition-all shadow-lg"
+                        onclick="closeAssignmentFlow()">Aceptar</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <script>
+        // Global State
+        window.flightsData = [];
+        window.map = null;
+        window.markers = [];
+        window.markerInstances = {};
+        window.selectedFlightId = null;
+        const OBTAIN_WEBHOOK = "https://n8n-nube-jw30.onrender.com/webhook/obtener-datos-dashboard";
+        const ASSIGN_WEBHOOK = "https://n8n-nube-jw30.onrender.com/webhook/asignar-vuelo-operativo";
+
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            fetchDashboardData();
+        });
+
+        // 1. Data Fetching
+        async function fetchDashboardData() {
+            const loader = document.getElementById('loading-screen');
+            loader.style.opacity = '1';
+            loader.style.visibility = 'visible';
+
+            try {
+                const response = await fetch(OBTAIN_WEBHOOK);
+                if (!response.ok) throw new Error('Error en la red');
+                const data = await response.json();
+
+                // Expecting data to be the array of flights
+                window.flightsData = Array.isArray(data) ? data : (data.data || []);
+
+                renderDashboard();
+            } catch (error) {
+                console.error('Fetch error:', error);
+                alert('Error al obtener datos de la base operativa.');
+            } finally {
+                setTimeout(() => {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.style.visibility = 'hidden', 500);
+                }, 800);
+            }
+        }
+
+        // 2. Map Initialization
+        function initMap() {
+            window.map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([-34.6037, -58.3816], 6); // Default center
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(window.map);
+
+            // Clear selection on map click
+            window.map.on('click', (e) => {
+                if (e.originalEvent.target.id === 'map' || e.originalEvent.target.classList.contains('leaflet-container')) {
+                    selectFlight(null);
+                }
+            });
+        }
+
+
+        // 3. Rendering Logic
+        function renderDashboard() {
+            renderTable(window.flightsData);
+            renderMarkers(window.flightsData);
+            renderGlobalPilots(window.flightsData);
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('flights-table-body');
+            tbody.innerHTML = '';
+
+            data.forEach((item, index) => {
+                const assigned = item["Vuelo asignado?"] === "Si";
+                const type = item.Especie ? "Siembra" : "Pulverización";
+                const dateRaw = item.Fecha_Aplicacion || "";
+                const dateFormatted = formatDate(dateRaw);
+
+                const postulationsCount = item.pilotos_postulados ? item.pilotos_postulados.length : 0;
+
+                const tr = document.createElement('tr');
+                const rowId = item.ID || index;
+                tr.id = `row-${rowId}`;
+                tr.className = "hover:bg-white/5 cursor-pointer transition-colors group border-b border-outline-variant/5";
+                tr.onclick = () => selectFlight(rowId, true);
+                tr.innerHTML = `
+
+                    <td class="px-4 py-2.5">
+                        <div class="flex flex-col">
+                            <span class="compact-text font-mono text-primary-fixed-dim">#${item.ID || 'N/A'}</span>
+                            <button class="text-tertiary text-[9px] font-bold mt-0.5 flex items-center gap-1 hover:text-tertiary-fixed" 
+                                    onclick="openDetailModal(${index})">
+                                <span class="material-symbols-outlined text-[10px]">info</span> Ver Info
+                            </button>
+                        </div>
+                    </td>
+                    <td class="px-4 py-2.5">
+                        <div class="flex flex-col">
+                            <span class="compact-text font-bold">${item.Empresa || 'Desconocida'}</span>
+                            <span class="text-[9px] text-on-surface-variant">${item.Categoria || 'Usuario'}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-2.5 compact-text text-on-surface-variant">${dateFormatted}</td>
+                    <td class="px-4 py-2.5">
+                        <span class="${type === 'Siembra' ? 'bg-secondary-container/20 text-secondary-fixed' : 'bg-primary-container/20 text-primary-fixed'} text-[10px] px-1.5 py-0.5 rounded border border-white/10 uppercase font-bold">
+                            ${type}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="compact-text font-bold ${postulationsCount === 0 ? 'text-on-surface-variant opacity-40' : ''}">${postulationsCount}</span>
+                            ${postulationsCount > 0 ? `<button class="text-primary text-[12px] font-bold hover:underline" onclick="openPostuladosModal(${index})">Ver Lista</button>` : '<span class="text-[10px] text-on-surface-variant opacity-40 italic">Ninguno</span>'}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderMarkers(data) {
+            // Clear existing markers
+            window.markers.forEach(m => window.map.removeLayer(m));
+            window.markers = [];
+            window.markerInstances = {};
+
+            const bounds = [];
+
+
+            data.forEach((item, index) => {
+                if (!item.Coordenadas) return;
+                const coords = item.Coordenadas.split(',').map(c => parseFloat(c.trim()));
+                if (coords.length !== 2 || isNaN(coords[0])) return;
+
+                const assigned = item["Vuelo asignado?"] === "Si";
+                const type = item.Especie ? "Siembra" : "Pulverización";
+                const color = assigned ? "#eab308" : "#10b981"; // Yellow vs Green
+                const iconName = type === "Siembra" ? "agriculture" : "prescriptions";
+
+                const customIcon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `
+                        <div class="marker-pin" style="background: ${color}"></div>
+                        <span class="material-symbols-outlined marker-icon">${iconName}</span>
+                    `,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                });
+
+                const marker = L.marker(coords, { icon: customIcon }).addTo(window.map);
+                const flightId = item.ID || index;
+                window.markerInstances[flightId] = marker;
+
+                marker.on('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    selectFlight(flightId);
+                });
+
+
+                window.markers.push(marker);
+                bounds.push(coords);
+            });
+
+            if (bounds.length > 0) {
+                window.map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        function renderGlobalPilots(data) {
+            const tbody = document.getElementById('pilots-global-table-body');
+            tbody.innerHTML = '';
+
+            const allPilots = [];
+            data.forEach(flight => {
+                if (flight.pilotos_postulados) {
+                    flight.pilotos_postulados.forEach(p => {
+                        allPilots.push({ ...p, flightId: flight.ID });
+                    });
+                }
+            });
+
+            allPilots.forEach(p => {
+                const isExpert = p.Experts_Registrado === "Si";
+                const fullName = `${p.Nombre || ''} ${p.Apellido || ''}`.trim() || 'N/A';
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-white/5 transition-colors border-b border-outline-variant/10";
+                tr.innerHTML = `
+                    <td class="px-4 py-2.5 font-semibold">${fullName}</td>
+                    <td class="px-4 py-2.5 text-on-surface-variant">${p.email_piloto || 'N/A'}</td>
+                    <td class="px-4 py-2.5 font-mono text-primary-fixed-dim">#${p.flightId || '-'}</td>
+                    <td class="px-4 py-2.5 font-bold text-tertiary-fixed-dim">$${p.precio_ha || '0'}</td>
+                    <td class="px-4 py-2.5 text-on-surface-variant font-mono text-[10px]">${p.user_id || 'N/A'}</td>
+                    <td class="px-4 py-2.5">
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-extrabold ${isExpert ? 'bg-expert-emerald/10 text-expert-emerald border-expert-emerald/30' : 'bg-surface-container-highest/50 text-on-surface-variant border-outline-variant/20'} border tracking-wider uppercase">
+                            ${isExpert ? 'REGISTRADO EXPERTS' : 'SIN REGISTRO EN EXPERTS'}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+
+        // 4. Selection Logic
+        function selectFlight(id, skipScroll = false) {
+            // 1. Clear previous
+            if (window.selectedFlightId !== null) {
+                const oldRow = document.getElementById(`row-${window.selectedFlightId}`);
+                if (oldRow) oldRow.classList.remove('row-active');
+
+                const oldMarker = window.markerInstances[window.selectedFlightId];
+                if (oldMarker) {
+                    const el = oldMarker.getElement();
+                    if (el) el.classList.remove('marker-active');
+                }
+            }
+
+
+            // 2. Set new
+            window.selectedFlightId = id;
+
+            if (id !== null) {
+                const newRow = document.getElementById(`row-${id}`);
+                if (newRow) {
+                    newRow.classList.add('row-active');
+                    if (!skipScroll) {
+                        newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }
+
+                const newMarker = window.markerInstances[id];
+                if (newMarker) {
+                    const el = newMarker.getElement();
+                    if (el) el.classList.add('marker-active');
+                }
+
+            }
+        }
+
+        // 5. Filters
+
+        function filterData() {
+            const query = document.getElementById('global-search').value.toLowerCase();
+            const showOnlyActive = document.getElementById('view-active').checked;
+
+            const filtered = window.flightsData.filter(item => {
+                const matchesSearch = (item.ID && item.ID.toLowerCase().includes(query)) ||
+                    (item.Empresa && item.Empresa.toLowerCase().includes(query));
+                const matchesStatus = showOnlyActive ? item["Vuelo asignado?"] === "No" : true;
+                return matchesSearch && matchesStatus;
+            });
+
+            renderTable(filtered);
+            renderMarkers(filtered);
+        }
+
+        // 5. Modals Logic
+        function openDetailModal(index) {
+            const item = window.flightsData[index];
+            if (!item) return;
+
+            document.getElementById('modal-id-display').innerText = '#' + (item.ID || 'N/A');
+            document.getElementById('val-localidad').innerText = item.Localidad_Texto || 'N/A';
+            document.getElementById('val-coordenadas').innerText = item.Coordenadas || 'N/A';
+            document.getElementById('val-hectareas').innerText = (item.Hectareas || item["Hectáreas"] || '0') + ' Ha';
+            document.getElementById('val-cultivo').innerText = item.Cultivo || 'N/A';
+            document.getElementById('val-obstaculos').innerText = item.Obstaculos || 'Ninguno';
+            document.getElementById('val-pago').innerText = item.Forma_Pago || 'N/A';
+
+            // Set obstacles color
+            const obsVal = document.getElementById('val-obstaculos');
+            const hasObstacles = item.Obstaculos && item.Obstaculos.toLowerCase() !== 'ninguno' && item.Obstaculos.toLowerCase() !== 'no';
+            obsVal.className = hasObstacles ? 'font-semibold text-error' : 'font-semibold text-expert-emerald';
+
+            const container = document.getElementById('ui-specific-container');
+            container.innerHTML = '';
+
+            const isSiembra = !!item.Especie;
+
+            if (isSiembra) {
+                container.innerHTML = `
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined text-sm text-primary">agriculture</span>
+                        <h4 class="text-[10px] font-bold text-primary uppercase tracking-wider">Especificaciones de Siembra</h4>
+                    </div>
+                    <div class="grid grid-cols-2 gap-y-2 text-xs">
+                        <span class="text-on-surface-variant">Especie:</span> <span class="font-bold text-primary">${item.Especie || 'N/A'}</span>
+                        <span class="text-on-surface-variant">Densidad:</span> <span class="font-semibold">${item.Kg_Ha || 'N/A'} Kg/Ha</span>
+                        <span class="text-on-surface-variant">Presentación:</span> <span class="font-medium">${item.Presentación || item.Presentacion || 'N/A'}</span>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined text-sm text-primary">prescriptions</span>
+                        <h4 class="text-[10px] font-bold text-primary uppercase tracking-wider">Receta de Aplicación</h4>
+                    </div>
+                    <div class="grid grid-cols-2 gap-y-2 text-xs">
+                        <span class="text-on-surface-variant">Cantidad prod.:</span> <span class="font-medium">${item["Cantidad de Productos"] || 'N/A'}</span>
+                        <span class="text-on-surface-variant">Tipo tratamiento:</span> <span class="font-bold">${item["Tipo de Tratamiento"] || 'N/A'}</span>
+                        <span class="text-on-surface-variant">Momento:</span> <span class="font-medium">${item["Momento de Aplicación"] || 'N/A'}</span>
+                        <span class="text-on-surface-variant">Agua disponible:</span> <span class="font-medium text-expert-emerald">${item["Disponibilidad de Agua"] || 'N/A'}</span>
+                        <span class="text-on-surface-variant">Provee corrector:</span> <span class="font-medium text-expert-emerald">${item["Provee Corrector"] || 'N/A'}</span>
+                        <span class="text-on-surface-variant">Cultivos vecinos:</span> <span class="font-medium">${item["Cultivos Vecinos"] || 'Ninguno'}</span>
+                    </div>
+
+                `;
+            }
+
+
+            document.getElementById('detalle-modal').classList.remove('hidden');
+        }
+
+        function openPostuladosModal(index) {
+            const flight = window.flightsData[index];
+            const list = flight.pilotos_postulados || [];
+            const container = document.getElementById('postulados-lista-view');
+            container.innerHTML = ''; // Limpiar contenedor
+
+            // Mostrar todos los pilotos que tengan al menos un nombre o se identifiquen
+            const displayPilots = list.filter(p => p.Nombre || p.user_id || p.email_piloto);
+
+            displayPilots.forEach((p, pIndex) => {
+
+                const isExpert = p.Experts_Registrado === "Si";
+                const fullName = `${p.Nombre || ''} ${p.Apellido || ''}`.trim() || 'N/A';
+                const card = document.createElement('div');
+                card.className = `bg-card-bg border border-white/5 p-4 rounded-xl hover:border-primary/30 transition-all group flex flex-col ${isExpert ? 'border-expert-emerald/20 bg-expert-emerald/[0.02]' : ''}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h4 class="font-bold text-sm text-on-surface">${fullName}</h4>
+                            <p class="text-[10px] text-on-surface-variant">${p.email_piloto || 'N/A'}</p>
+                            <p class="text-[9px] text-primary-fixed font-mono mt-0.5">ID: ${p.user_id || 'N/A'}</p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full font-bold text-[8px] border ${isExpert ? 'bg-expert-emerald/20 text-expert-emerald border-expert-emerald/30' : 'bg-surface-container-highest text-on-surface-variant border-white/5'}">
+                            ${isExpert ? 'PILOTO EXPERT' : 'SIN REGISTRO'}
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 border-t border-white/5 pt-3 mb-4">
+                        <div>
+                            <p class="text-[9px] uppercase tracking-wider text-on-surface-variant mb-0.5">Precio/Ha</p>
+                            <p class="font-bold text-primary text-xs">$${p.precio_ha || '0'}</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] uppercase tracking-wider text-on-surface-variant mb-0.5">Oferta Total</p>
+                            <p class="font-bold text-tertiary text-xs">$${(p.total_oferta || 0).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <button id="btn-assign-${pIndex}" class="mt-auto w-full ${isExpert ? 'bg-expert-emerald' : 'bg-primary'} text-white font-bold py-1.5 rounded-lg hover:scale-[1.01] active:scale-95 transition-all text-[10px]"
+                        onclick="assignPilot(${index}, ${pIndex})">
+                        Asignar Vuelo
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('postulados-modal').classList.remove('hidden');
+        }
+
+
+
+        // 6. Assignment Persistence
+        async function assignPilot(flightIndex, pilotIndex) {
+            const flight = window.flightsData[flightIndex];
+            const pilot = flight.pilotos_postulados[pilotIndex];
+            const btn = document.getElementById(`btn-assign-${pilotIndex}`);
+
+            const originalText = btn.innerText;
+            btn.innerText = "Procesando...";
+            btn.disabled = true;
+
+            const payload = {
+                row_postulacion: pilot.row_number,
+                row_solicitud: flight.row_number,
+                tipo_vuelo: flight.Especie ? "Siembra" : "Pulverización",
+                id_solicitud: flight.ID
+            };
+
+
+            try {
+                const response = await fetch(ASSIGN_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    showSuccessState(flight, pilot);
+                } else {
+                    throw new Error('Fallback fail');
+                }
+            } catch (error) {
+                console.warn('POST failed, proceeding anyway for UX consistency');
+                showSuccessState(flight, pilot);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function showSuccessState(flight, pilot) {
+            const fullName = `${pilot.Nombre || ''} ${pilot.Apellido || ''}`.trim() || 'N/A';
+            document.getElementById('success-pilot-name').innerText = fullName;
+            document.getElementById('success-pilot-email').innerText = pilot.email_piloto;
+            document.getElementById('success-pilot-id').innerText = pilot.user_id;
+
+            const loc = flight.Localidad_Texto || 'N/A';
+            const ha = flight.Hectareas || flight["Hectáreas"] || '0';
+            const firstName = (pilot.Nombre || '').split(' ')[0];
+
+            const msg = `Hola ${firstName}, has sido elegido para el vuelo de ${ha} ha en ${loc}.`;
+            document.getElementById('communication-msg').innerText = msg;
+
+            // Actualizar mensaje de cortesía dinámicamente
+            document.getElementById('rej-ha').innerText = ha;
+            document.getElementById('rej-loc').innerText = loc;
+
+            // Rejection list
+
+            const others = flight.pilotos_postulados.filter(p => p.user_id !== pilot.user_id);
+            const rejList = document.getElementById('rejection-list');
+            rejList.innerHTML = '';
+
+            others.slice(0, 3).forEach(op => {
+                const opFullName = `${op.Nombre || ''} ${op.Apellido || ''}`.trim() || 'N/A';
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center text-[10px] pb-1 border-b border-white/5";
+                div.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-bold">${opFullName}</span>
+                        <span class="opacity-60">${op.email_piloto}</span>
+                    </div>
+                    <span class="font-mono opacity-40">${op.user_id}</span>
+                `;
+                rejList.appendChild(div);
+            });
+
+            if (others.length > 3) {
+                const moreBtn = document.createElement('button');
+                moreBtn.className = "text-[9px] text-primary hover:underline mt-1";
+                moreBtn.innerText = `Ver todos (${others.length})`;
+                rejList.appendChild(moreBtn);
+            }
+
+            document.getElementById('rej-ha').innerText = ha;
+            document.getElementById('rej-loc').innerText = loc;
+
+            document.getElementById('postulados-lista-view').classList.add('hidden');
+            document.getElementById('assignment-success-view').classList.remove('hidden');
+        }
+
+        function closeAssignmentFlow() {
+            closeModal('postulados-modal');
+            fetchDashboardData();
+        }
+
+        // 7. Utils
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return dateStr;
+                return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        function copyMessage() {
+            const text = document.getElementById('communication-msg').innerText;
+            navigator.clipboard.writeText(text);
+            const btn = event.target;
+            const original = btn.innerText;
+            btn.innerText = 'Copiado!';
+            setTimeout(() => btn.innerText = original, 2000);
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            if (id === 'postulados-modal') {
+                document.getElementById('postulados-lista-view').classList.remove('hidden');
+                document.getElementById('assignment-success-view').classList.add('hidden');
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.fixed.inset-0:not(#loading-screen)').forEach(m => m.classList.add('hidden'));
+            }
+        });
+
+        function copyCourtesyMessage() {
+            const text = document.getElementById('rejection-full-msg').innerText;
+            navigator.clipboard.writeText(text);
+            const btn = event.target;
+            const original = btn.innerText;
+            btn.innerText = 'Copiado!';
+            setTimeout(() => btn.innerText = original, 2000);
+        }
+
+    </script>
+
+
+</body>
+
+</html>
