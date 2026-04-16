@@ -608,8 +608,10 @@
                 attributionControl: false
             }).setView([-34.6037, -58.3816], 6); // Default center
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19
+            L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                attribution: '© Google Maps'
             }).addTo(window.map);
 
             // Clear selection on map click
