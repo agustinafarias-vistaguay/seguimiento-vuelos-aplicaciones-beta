@@ -432,9 +432,11 @@
                             <span class="font-bold text-white" id="val-empresa">Cargando...</span>
                             <span class="text-on-surface-variant">Localidad:</span> <span class="font-semibold"
                                 id="val-localidad">Pergamino, BA</span>
-                            <span class="text-on-surface-variant">Coordenadas:</span> <span
-                                class="font-mono text-primary-fixed-dim text-[10px]" id="val-coordenadas">-33.8917,
-                                -60.5741</span>
+                            <span class="text-on-surface-variant">Ubicación:</span>
+                            <a href="#" target="_blank" id="val-coordenadas"
+                                class="font-bold text-primary flex items-center gap-1 hover:underline text-[10px] w-fit">
+                                <span class="material-symbols-outlined text-[14px]">map</span> Ver en Google Maps
+                            </a>
                             <span class="text-on-surface-variant">Hectáreas:</span> <span
                                 class="font-semibold text-primary" id="val-hectareas">120 Ha</span>
                             <span class="text-on-surface-variant">Cultivo:</span> <span class="font-semibold"
@@ -878,7 +880,17 @@
             document.getElementById('modal-id-display').innerText = '#' + (item.ID || 'N/A');
             document.getElementById('val-empresa').innerText = item.Empresa || 'N/A';
             document.getElementById('val-localidad').innerText = item.Localidad_Texto || 'N/A';
-            document.getElementById('val-coordenadas').innerText = item.Coordenadas || 'N/A';
+            const coordLink = document.getElementById('val-coordenadas');
+            if (item.Google_Maps_Link) {
+                coordLink.href = item.Google_Maps_Link;
+                coordLink.innerHTML = `<span class="material-symbols-outlined text-[14px]">map</span> Ver en Google Maps`;
+                coordLink.className = "font-bold text-primary flex items-center gap-1 hover:brightness-125 text-[10px] w-fit bg-primary/10 px-2 py-0.5 rounded border border-primary/20 transition-all";
+                coordLink.setAttribute('target', '_blank');
+            } else {
+                coordLink.removeAttribute('href');
+                coordLink.innerText = item.Coordenadas || 'N/A';
+                coordLink.className = "font-mono text-primary-fixed-dim text-[10px]";
+            }
             document.getElementById('val-hectareas').innerText = (item.Hectareas || item["Hectáreas"] || '0') + ' Ha';
             document.getElementById('val-cultivo').innerText = item.Cultivo || 'N/A';
             document.getElementById('val-obstaculos').innerText = item.Obstaculos || 'Ninguno';
