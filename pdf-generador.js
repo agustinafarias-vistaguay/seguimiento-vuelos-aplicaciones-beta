@@ -1,5 +1,12 @@
 // pdf-generador.js
 
+const loadBrandImage = (url) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('No se pudo cargar el logo'));
+    img.src = url;
+});
+
 async function generatePDF(flight, pilot) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -8,24 +15,38 @@ async function generatePDF(flight, pilot) {
 
     const isSiembra = flight.Especie ? true : false;
     const titleStr = isSiembra ? "ORDEN DE TRABAJO - SIEMBRA" : "ORDEN DE TRABAJO - PULVERIZACIÓN";
-    const typeColor = isSiembra ? [16, 185, 129] : [59, 130, 246]; // Verde para Siembra, Azul para Pulve
 
-    // 1. Título y Encabezado
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(typeColor[0], typeColor[1], typeColor[2]);
-    doc.text("VISTAGUAY", margin, y);
+    // Color verde Vistaguay (Primary)
+    const brandColor = [16, 185, 129];
+
+    // 1. Título y Encabezado con el nuevo Logo PNG
+    try {
+        const logoImg = await loadBrandImage('images/logo-horizontal-verdeynegro.png');
+
+        // Calculamos la proporción matemática para no deformar el logo
+        const desiredWidth = 45; // El ancho que queremos que ocupe en la hoja
+        const aspectRatio = logoImg.height / logoImg.width;
+        const calculatedHeight = desiredWidth * aspectRatio; // Alto proporcional perfecto
+
+        // Lo dibujamos ajustando un poquito la posición Y para que quede alineado con el título
+        doc.addImage(logoImg, 'PNG', margin, y - (calculatedHeight / 2) - 4, desiredWidth, calculatedHeight);
+    } catch (e) {
+        // Si falla, escribimos el nombre en verde
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.setTextColor(brandColor[0], brandColor[1], brandColor[2]);
+        doc.text("VISTAGUAY", margin, y);
+    }
 
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
     doc.text(titleStr, 120, y - 2);
 
-    y += 10;
-    doc.setDrawColor(typeColor[0], typeColor[1], typeColor[2]);
+    y += 12;
+    doc.setDrawColor(brandColor[0], brandColor[1], brandColor[2]);
     doc.setLineWidth(0.5);
     doc.line(margin, y, 190, y);
 
-    // Función auxiliar para formatear la fecha
     function formatPdfDate(dateStr) {
         if (!dateStr) return 'N/A';
         const parts = dateStr.split('-');
@@ -33,7 +54,7 @@ async function generatePDF(flight, pilot) {
         return dateStr;
     }
 
-    // 2. Datos Generales de Operación (ELIMINAMOS EL ID DE MISION AQUÍ)
+    // 2. Datos Generales
     y += 15;
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -46,8 +67,7 @@ async function generatePDF(flight, pilot) {
         ["Productor:", flight.Empresa || 'N/A'],
         ["Fecha Deseada:", formatPdfDate(flight.Fecha_Aplicacion) || 'N/A'],
         ["Localidad:", flight.Localidad_Texto || 'N/A'],
-        ["Contacto:", flight.Contacto || 'N/A'],
-        ["Hectáreas:", `${flight.Hectareas || '0'} Ha`],
+        ["Hectáreas:", `${flight.Hectareas || flight["Hectáreas"] || '0'} Ha`],
         ["Cultivo:", flight.Cultivo || 'N/A'],
         ["Obstáculos:", flight.Obstaculos || 'Ninguno']
     ];
@@ -61,7 +81,7 @@ async function generatePDF(flight, pilot) {
         y += (textVal.length * 5) + 2;
     });
 
-    // 3. Receta Técnica Dinámica
+    // 3. Receta Técnica
     y += 5;
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -70,23 +90,18 @@ async function generatePDF(flight, pilot) {
     y += 8;
     doc.setFont("helvetica", "normal");
     let infoTecnica = [];
-
     if (isSiembra) {
         infoTecnica = [
             ["Especie:", flight.Especie || 'N/A'],
             ["Dosis:", `${flight.Kg_Ha || '0'} kg/ha`],
-            ["Presentación:", flight.Presentacion || 'N/A']
+            ["Presentación:", flight.Presentacion || flight.Presentación || 'N/A']
         ];
     } else {
         infoTecnica = [
             ["Tipo Pulverización:", flight["Tipo de Pulverización"] || 'N/A'],
             ["Tratamiento:", flight["Tipo de Tratamiento"] || 'N/A'],
-            ["Momento Aplic.:", flight["Momento de Aplicación"] || 'N/A'],
             ["Cant. Productos:", flight["Cantidad de Productos"] || 'N/A'],
-            ["Prescripción:", flight["Prescripción"] || 'N/A'],
-            ["Agua Disp.:", flight["Disponibilidad de Agua"] || 'N/A'],
-            ["Corrector:", flight["Provee Corrector"] || 'N/A'],
-            ["Cult. Vecinos:", flight["Cultivos Vecinos"] || 'N/A']
+            ["Agua Disp.:", flight["Disponibilidad de Agua"] || 'N/A']
         ];
     }
 
@@ -114,27 +129,17 @@ async function generatePDF(flight, pilot) {
     y += 7;
     doc.text(`Celular: ${pilot.celular || pilot.Celular || 'N/A'}`, margin, y);
 
-    // 5. Botón a Google Maps (USAMOS EL LINK DIRECTO DEL JSON AQUÍ)
+    // 5. Botón Google Maps (Verde Vistaguay)
     y += 15;
     if (flight.Google_Maps_Link && y < 270) {
-        const mapUrl = flight.Google_Maps_Link;
-
-        doc.setFillColor(37, 99, 235); // Azul Maps
+        doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
         doc.roundedRect(margin, y, 80, 12, 2, 2, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.text("IR A LA UBICACIÓN (MAPS)", margin + 12, y + 7.5);
-        doc.link(margin, y, 80, 12, { url: mapUrl });
-        y += 20;
+        doc.link(margin, y, 80, 12, { url: flight.Google_Maps_Link });
     }
 
-    // Pie de página
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.setFont("helvetica", "italic");
-    doc.text("Por favor, notificar a Vistaguay una vez finalizada la labor.", margin, y);
-
-    // Descargar el archivo
-    doc.save(`Orden_${flight.ID || 'Vuelo'}.pdf`);
+    doc.save(`Orden_Vuelo_${flight.ID}.pdf`);
 }

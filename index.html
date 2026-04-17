@@ -290,12 +290,12 @@
 
     <!-- TopNavBar -->
     <header
-        class="fixed top-0 w-full z-[80] h-14 bg-slate-900/80 backdrop-blur-3xl border-b border-white/10 shadow-xl flex justify-between items-center px-6">
+        class="fixed top-0 w-full z-[80] h-14 bg-slate-900/80 backdrop-blur-3xl border-b border-white/10 shadow-xl flex justify-between items-center px-4 sm:px-6">
 
-        <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-blue-400 text-xl"
-                style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
-            <h1 class="text-lg font-bold tracking-tighter text-blue-400 font-manrope">Vistaguay Control</h1>
+        <div class="flex items-center gap-2 sm:gap-3">
+            <img src="images/logo-VG.svg" alt="Vistaguay" class="h-6 sm:h-7 w-auto object-contain" />
+            <h1 class="text-lg font-bold tracking-tighter text-primary font-manrope hidden sm:block">Vistaguay Control
+            </h1>
         </div>
         <div class="flex items-center gap-4">
             <div class="segmented-control border border-white/5">
@@ -380,8 +380,8 @@
                 <h2 class="font-headline font-bold text-lg tracking-tight text-on-surface">Lista de Pilotos</h2>
                 <div class="h-[1px] flex-1 bg-gradient-to-r from-outline-variant/20 to-transparent"></div>
             </div>
-            <div class="glass-panel rounded-xl overflow-hidden border border-outline-variant/10">
-                <table class="w-full text-left">
+            <div class="glass-panel rounded-xl overflow-x-auto border border-outline-variant/10">
+                <table class="w-full text-left min-w-[700px]">
                     <thead class="bg-surface-container-lowest text-[10px]">
                         <tr>
                             <th class="px-3 py-2 font-bold text-on-surface-variant uppercase">Nombre</th>
@@ -820,6 +820,7 @@
 
 
         // 4. Selection Logic
+        // 4. Selection Logic
         function selectFlight(id, skipScroll = false) {
             // 1. Clear previous
             if (window.selectedFlightId !== null) {
@@ -833,7 +834,6 @@
                 }
             }
 
-
             // 2. Set new
             window.selectedFlightId = id;
 
@@ -846,12 +846,25 @@
                     }
                 }
 
+                // [NUEVO] Hacer zoom y centrar el mapa en la ubicación
+                const item = window.flightsData.find(f => f.ID === id);
+                if (item && item.Coordenadas) {
+                    const coords = item.Coordenadas.split(',').map(c => parseFloat(c.trim()));
+                    if (coords.length === 2 && !isNaN(coords[0])) {
+                        window.map.flyTo(coords, 14, { duration: 1.2 });
+                    }
+                }
+
                 const newMarker = window.markerInstances[id];
-                if (newMarker) {
+                if (newMarker && window.markerClusterGroup) {
+                    window.markerClusterGroup.zoomToShowLayer(newMarker, () => {
+                        const el = newMarker.getElement();
+                        if (el) el.classList.add('marker-active');
+                    });
+                } else if (newMarker) {
                     const el = newMarker.getElement();
                     if (el) el.classList.add('marker-active');
                 }
-
             }
         }
 
@@ -1129,7 +1142,7 @@
 
         function closeAssignmentFlow() {
             closeModal('postulados-modal');
-            fetchDashboardData();
+            window.location.reload(); // [NUEVO] Recarga la página completa
         }
 
         // --- CONFIGURACIÓN DE SEMÁFORO (Podés cambiar estos números cuando quieras) ---
