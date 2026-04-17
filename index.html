@@ -498,27 +498,43 @@
                     <div class="space-y-4">
                         <div class="bg-primary-container/10 border border-primary/20 p-4 rounded-xl">
                             <h5 class="text-[10px] font-bold text-primary uppercase mb-3 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-xs">person_check</span> Piloto Seleccionado
+                                <span class="material-symbols-outlined text-xs">handshake</span> Participantes del Grupo
                             </h5>
-                            <div class="space-y-1 mb-4">
-                                <p class="text-sm font-bold text-white" id="success-pilot-name">Marco Vettori</p>
-                                <p class="text-[10px] text-on-surface-variant" id="success-pilot-email">
-                                    m.vettori@vistaguay.com</p>
-                                <p class="text-[9px] font-mono text-primary-fixed-dim" id="success-pilot-id">USR-0982
-                                </p>
+
+                            <div
+                                class="grid grid-cols-2 gap-4 mb-4 bg-surface-container-highest/30 p-3 rounded-lg border border-white/5">
+                                <div>
+                                    <p
+                                        class="text-[9px] uppercase tracking-wider text-on-surface-variant mb-1 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[10px]">agriculture</span> Productor
+                                    </p>
+                                    <p class="text-xs font-bold text-white" id="success-producer-name">Cargando...</p>
+                                    <p class="text-[10px] text-on-surface-variant mt-0.5" id="success-producer-phone">
+                                        ...</p>
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-[9px] uppercase tracking-wider text-on-surface-variant mb-1 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[10px]">flight_takeoff</span> Piloto
+                                    </p>
+                                    <p class="text-xs font-bold text-white" id="success-pilot-name">Cargando...</p>
+                                    <p class="text-[10px] text-on-surface-variant mt-0.5" id="success-pilot-phone">...
+                                    </p>
+                                </div>
                             </div>
+
                             <div class="bg-black/40 p-3 rounded border border-white/5 relative">
-                                <p class="text-[10px] font-bold text-primary uppercase mb-1 flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-[10px]">send</span> Mensaje de Éxito
+                                <p class="text-[10px] font-bold text-primary uppercase mb-2 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[10px]">chat</span> Mensaje para el
+                                    Grupo
                                 </p>
-                                <p class="text-[11px] italic text-on-surface/90 select-all leading-relaxed"
+                                <p class="text-[11px] italic text-on-surface/90 select-all leading-relaxed whitespace-pre-line"
                                     id="communication-msg">
-                                    'Hola [Nombre], has sido elegido para el vuelo de [X] ha en la localidad de [X].'
+                                    Cargando mensaje...
                                 </p>
                                 <button class="absolute top-2 right-2 text-[9px] text-primary hover:underline"
                                     onclick="copyMessage()">Copiar</button>
                             </div>
-
                         </div>
                     </div>
                     <!-- Right Column: Rejection Management -->
@@ -961,20 +977,28 @@
             const container = document.getElementById('postulados-lista-view');
             container.innerHTML = ''; // Limpiar contenedor
 
-            // MAGIA: Si el vuelo YA ESTÁ ASIGNADO, saltamos directo a la pantalla de éxito
-            if (flight["Vuelo asignado?"] === "Si" && flight.pilotos_postulados) {
-                const assignedPilot = flight.pilotos_postulados.find(p => p.Piloto_Asignado === "Si");
-                if (assignedPilot) {
-                    document.getElementById('postulados-modal').classList.remove('hidden');
-                    showSuccessState(flight, assignedPilot);
-                    return; // Detenemos la ejecución acá para que no dibuje los botones de "Asignar"
+            // MAGIA CORREGIDA: Verificación inteligente de vuelo asignado
+            const estaAsignado = flight["Vuelo asignado?"] && flight["Vuelo asignado?"].toLowerCase().includes("si");
+
+            if (estaAsignado && flight.pilotos_postulados && flight.pilotos_postulados.length > 0) {
+                // Buscamos al piloto ganador (ignorando mayúsculas/acentos)
+                let assignedPilot = flight.pilotos_postulados.find(p => p.Piloto_Asignado && p.Piloto_Asignado.toLowerCase().includes("si"));
+
+                // FALLBACK DE SEGURIDAD: Si la base de datos tuvo un retraso y no marcó al piloto, 
+                // forzamos a que muestre la pantalla de éxito con el primero de la lista
+                // para que no te vuelva a pedir asignar algo ya asignado.
+                if (!assignedPilot) {
+                    assignedPilot = flight.pilotos_postulados[0];
                 }
+
+                document.getElementById('postulados-modal').classList.remove('hidden');
+                showSuccessState(flight, assignedPilot);
+                return; // Detenemos la ejecución acá para que no dibuje los botones de "Asignar"
             }
 
             // Si llegamos acá, significa que no está asignado. Mostramos la lista normal.
             document.getElementById('postulados-lista-view').classList.remove('hidden');
             document.getElementById('assignment-success-view').classList.add('hidden');
-
             const list = flight.pilotos_postulados || [];
 
             // Mostrar todos los pilotos que tengan al menos un nombre o se identifiquen
@@ -1042,7 +1066,8 @@
                 row_postulacion: pilot.row_number,
                 row_solicitud: flight.row_number,
                 tipo_vuelo: flight.Especie ? "Siembra" : "Pulverización",
-                id_solicitud: flight.ID
+                id_solicitud: flight.ID,
+                email_piloto: pilot.email_piloto
             };
 
 
@@ -1068,23 +1093,20 @@
         }
 
         function showSuccessState(flight, pilot) {
-            // 1. Datos del ganador (con validación de vacíos)
+            // 1. Datos del Piloto
             const fullName = `${pilot.Nombre || ''} ${pilot.Apellido || ''}`.trim() || 'Nombre no registrado';
             document.getElementById('success-pilot-name').innerText = fullName;
-            document.getElementById('success-pilot-email').innerText = `${pilot.email_piloto || 'N/A'} | 📱 ${pilot.Celular || pilot.celular || 'Sin celular'}`;
-            document.getElementById('success-pilot-id').innerText = `user_id: ${pilot.user_id || '-'}`;
+            document.getElementById('success-pilot-phone').innerText = '📱 ' + (pilot.Celular || pilot.celular || 'Sin celular');
+
+            // 2. Datos del Productor
+            document.getElementById('success-producer-name').innerText = flight.Empresa || 'Productor sin nombre';
+            document.getElementById('success-producer-phone').innerText = '📱 ' + (flight.Contacto || 'Sin celular');
 
             const loc = flight.Localidad_Texto || 'N/A';
             const ha = flight.Hectareas || flight["Hectáreas"] || '0';
-            const firstName = (pilot.Nombre || '').split(' ')[0] || 'Piloto';
 
-            // Datos extraídos para el nuevo mensaje
-            const fechaVuelo = formatSimpleDate(flight.Fecha_Aplicacion) || 'A definir';
-            const contactoProd = flight.Contacto || 'Sin contacto';
-            const empresaProd = flight.Empresa || 'Productor';
-
-            // 2. Mensaje dinámico de ACCIÓN (Piloto Asignado) con toda la info
-            const msgAccion = `Hola ${firstName}, has sido asignado a un nuevo vuelo.\n\nDetalles de la labor:\n- Productor: ${empresaProd}\n- Ubicación: ${loc}\n- Hectáreas a tratar: ${ha} ha\n- Fecha solicitada: ${fechaVuelo}\n- Contacto del Productor: ${contactoProd}\n\nPor favor, recordá avisarnos una vez finalizada la labor.\n\nTe adjuntamos tu orden de trabajo a continuación:`;
+            // 3. Nuevo Mensaje dinámico para el GRUPO
+            const msgAccion = `¡Hola a ambos! 👋\n\nCreé este grupo para que podamos coordinar el vuelo para el lote de ${ha} hectáreas.\n\nLes dejo a continuación la orden de trabajo para que cada uno pueda hacer seguimiento del proceso. Quedo atento a cualquier consulta que tengan, estoy para ayudarlos.`;
             document.getElementById('communication-msg').innerText = msgAccion;
 
             // --- INICIO BOTÓN PDF (Conectado al archivo externo) ---
